@@ -1,0 +1,7 @@
+# udev rule file
+# place this file at /etc/udev/rules.d
+# Device nodes are created as /dev/camdrv0, /dev/camdrv1, etc. with minor numbers
+# SYMLINK creates a fixed name /dev/camdrv pointing to the device
+
+KERNEL=="camdrv*", MODE="0666", SYMLINK+="camdrv"
+
