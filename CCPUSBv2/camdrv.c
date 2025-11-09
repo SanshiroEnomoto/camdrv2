@@ -497,6 +497,14 @@ enum ccp_ctrlbits {
     ctrlCLEAR = 0x80
 };
 
+enum ccp_statbits {
+    statQ = 0x01,
+    statX = 0x02,
+    statI = 0x04,
+    statLE = 0x08,
+    statREQ = 0x40,
+    statDEM = 0x80
+};
 
 static int ccp_inout(struct camdrv_device *dev, unsigned int write_size, unsigned int read_size)
 {
@@ -617,8 +625,9 @@ static int ccp_clear(struct camdrv_device *dev, unsigned crate_number)
 static int ccp_camac_action(struct camdrv_device *dev, unsigned crate_number, unsigned n, unsigned a, unsigned f, unsigned* data)
 {
     unsigned char cmd = cmdCAMAC;
-    unsigned dl, dm, dh;
+    unsigned dl = 0, dm = 0, dh = 0;
     unsigned int read_size;
+    unsigned status, nq, nx;
     int result;
     
     if (crate_number <= 0  || crate_number >= 8) {
@@ -633,10 +642,12 @@ static int ccp_camac_action(struct camdrv_device *dev, unsigned crate_number, un
     else {
         read_size = 10;
     }
-    dl = (*data & 0x0000ff);
-    dm = (*data & 0x00ff00) >> 8;
-    dh = (*data & 0xff0000) >> 16;
-    *data = 0;
+    if (data) {
+        dl = (*data & 0x0000ff);
+        dm = (*data & 0x00ff00) >> 8;
+        dh = (*data & 0xff0000) >> 16;
+        *data = 0;
+    }
     
     dev->tx_buffer[0] = (cmd << 4);
     dev->tx_buffer[1] = (cmd & 0xF0);
@@ -660,26 +671,24 @@ static int ccp_camac_action(struct camdrv_device *dev, unsigned crate_number, un
         return result;
     }
     
-    if (f > 15) {
+    if ((f <= 15) && data) {
         *data = (
-            ((dev->rx_buffer[dev->start_n + 1] & 0x0F) << 4) |
-            (dev->rx_buffer[dev->start_n] & 0x0F)
+            ((unsigned int)(dev->rx_buffer[dev->start_n + 7] & 0x0F) << 20) |
+            ((unsigned int)(dev->rx_buffer[dev->start_n + 6] & 0x0F) << 16) |
+            ((unsigned int)(dev->rx_buffer[dev->start_n + 5] & 0x0F) << 12) |
+            ((unsigned int)(dev->rx_buffer[dev->start_n + 4] & 0x0F) << 8) |
+            ((unsigned int)(dev->rx_buffer[dev->start_n + 3] & 0x0F) << 4) |
+            ((unsigned int)(dev->rx_buffer[dev->start_n + 2] & 0x0F))
         );
     }
-    else {
-        *data = (
-            ((unsigned int)(dev->rx_buffer[dev->start_n + 7] & 0x0F) << 28) |
-            ((unsigned int)(dev->rx_buffer[dev->start_n + 6] & 0x0F) << 24) |
-            ((unsigned int)(dev->rx_buffer[dev->start_n + 5] & 0x0F) << 20) |
-            ((unsigned int)(dev->rx_buffer[dev->start_n + 4] & 0x0F) << 16) |
-            ((unsigned int)(dev->rx_buffer[dev->start_n + 3] & 0x0F) << 12) |
-            ((unsigned int)(dev->rx_buffer[dev->start_n + 2] & 0x0F) << 8) |
-            ((unsigned int)(dev->rx_buffer[dev->start_n + 1] & 0x0F) << 4) |
-            ((unsigned int)(dev->rx_buffer[dev->start_n] & 0x0F))
-        );
-    }
-    
-    return 0;
+    status = (
+        ((unsigned int)(dev->rx_buffer[dev->start_n + 1] & 0x0F) << 4) |
+        ((unsigned int)(dev->rx_buffer[dev->start_n] & 0x0F))
+    );
+    nq = (status & statQ) ? 0x00 : 0x01;
+    nx = (status & statX) ? 0x00 : 0x01;
+
+    return ((nx << 1) | nq);
 }
 
 
