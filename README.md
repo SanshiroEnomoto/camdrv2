@@ -9,7 +9,7 @@ Linux 2/3 用に書かれた CAMAC デバイスドライバ camdrv を新しい 
 
 使い方は [camdrv のページ](https://www.awa.tohoku.ac.jp/~sanshiro/kinoko/camdrv) を参照してください．テストプログラムは `test` ディレクトリに移しました．本体のライブラリをコンパイル後，`cd test` して `make` してください．
 
-*ドライバのコンパイル*
+**ドライバのコンパイル**
 ```bash
 cd CCPUSBv2
 make
@@ -17,16 +17,15 @@ sudo make install
 cd ..
 ```
 
-*ライブラリのコンパイル*
+**ライブラリのコンパイル**
 ```bash
 make
 ```
 
-*テストプログラムのコンパイル*
+**テストプログラムのコンパイル**
 ```bash
 cd test
 make
 ```
 
-Python 版の camlib も作ってみました．camlib/toyocamac のライブラリを作成する必要はありませんが，ドライバのコンパイルとインストールは必要です．
-
+Python 版の camlib も作ってみました．バインディングではないので C++ の camlib には依存していませんが，ドライバのコンパイルとインストールは必要です．

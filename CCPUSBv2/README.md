@@ -10,9 +10,8 @@ Hoshin CCP-USB コントローラー用の Linux カーネルモジュールド�
 
 ### カーネルバージョン
 
-- **最小要件**: Linux 2.6.36 以降
-- **推奨**: Linux 3.0 以降
-- **動作確認済み**: Linux 5.x / 6.x
+- **最小要件**: Linux 6.x
+- **動作確認済み**: Linux 6.14 (Ubuntu 24.04)
 
 ### 必要なパッケージ
 
@@ -159,11 +158,11 @@ make clean
 
 ## ライセンス
 
-GPL (GNU General Public License)
+GPL2 (GNU General Public License Version 2)
 
 ## 作成者
 
-Enomoto Sanshiro
+Sanshiro Enomoto (University of Washington, Seattle)
 
 ## 更新履歴
 

@@ -1,7 +1,10 @@
-
-import os, fcntl, struct, errno
+# camlib.py #
+# Created by Sanshiro Enomoto on 9 November 2025. #
 
 DEVICE_FILE = "/dev/camdrv"
+
+
+import os, fcntl, struct, errno
 
 _IOC_NONE = 0
 _IOC_READ = 2
