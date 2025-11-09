@@ -1,7 +1,5 @@
 /* camdrv.h */
-/* CAMAC device driver for CC/7700-PCI on Linux 2.x.x */
-/* Created by Enomoto Sanshiro on 11 April 1999. */
-/* Last updated by Enomoto Sanshiro on 22 April 2005. */
+/* Created by Sanshiro Enomoto on 11 April 1999. */
 
 
 #ifndef __CAMDRV_H__

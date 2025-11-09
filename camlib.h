@@ -1,6 +1,6 @@
 /* camlib.h */
-/* Created by Enomoto Sanshiro on 23 July 1999. */
-/* Last updated by Enomoto Sanshiro on 18 September 2002. */
+/* Created by Sanshiro Enomoto on 23 July 1999. */
+/* Last updated by Sanshiro Enomoto on 18 September 2002. */
 
 
 #ifndef __CAMLIB_H_INCLUDED

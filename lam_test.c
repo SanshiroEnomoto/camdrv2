@@ -1,6 +1,6 @@
 /* lam_test.c */
-/* Created by Enomoto Sanshiro on 23 July 1999. */
-/* Last updated by Enomoto Sanshiro on 23 July 1999. */
+/* Created by Sanshiro Enomoto on 23 July 1999. */
+/* Last updated by Sanshiro Enomoto on 23 July 1999. */
 
 
 #include <stdio.h>

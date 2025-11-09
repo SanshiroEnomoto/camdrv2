@@ -1,6 +1,6 @@
 /* poll_test.c */
-/* Created by Enomoto Sanshiro on 27 October 2005. */
-/* Last updated by Enomoto Sanshiro on 27 October 2005. */
+/* Created by Sanshiro Enomoto on 27 October 2005. */
+/* Last updated by Sanshiro Enomoto on 27 October 2005. */
 
 
 #include <stdio.h>
