@@ -1,7 +1,7 @@
 /* camdrv.c */
-/* CAMAC device driver for Hoshin CCP-USB on modern Linux */
+/* CAMAC device driver for Hoshin CCP-USB(V2) on Linux 6 */
 /* Created by Enomoto Sanshiro on 3 October 2013. */
-/* Updated for modern Linux kernel by Enomoto Sanshiro. */
+/* Updated for Linux kernel 6 by Enomoto Sanshiro on 8 November 2025. */
 
 
 #include <linux/kernel.h>
@@ -19,10 +19,10 @@
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Enomoto Sanshiro");
-MODULE_DESCRIPTION("Camac Driver for Hoshin CCP-USB Controller");
+MODULE_DESCRIPTION("Camac Driver for Hoshin CCP-USB(V2) Controller");
 
 #define VENDOR_ID 0x24b9
-#define PRODUCT_ID 0x0011
+#define PRODUCT_ID 0x0020
 #define BUFFER_SIZE 64
 #define camdrv_name "camdrv"
 
