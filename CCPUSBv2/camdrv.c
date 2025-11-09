@@ -27,36 +27,12 @@ MODULE_VERSION("1.00");
 #define CCP_VENDOR_ID 0x24b9
 #define CCP_PRODUCT_ID 0x0020
 
-
 #define BUFFER_SIZE 64
 #define LATENCY_TIME 2
 #define EE_BUFFER_SIZE 512
 #define SET_RD_SIZE 512
 #define TIMEOUT_MS 500
 
-// FTDI control commands
-#define FTDI_SIO_RESET_REQUEST_TYPE 0x40
-#define FTDI_SIO_RESET_REQUEST 0x00
-#define FTDI_SIO_RESET_SIO 0
-#define FTDI_SIO_RESET_PURGE_RX 1
-#define FTDI_SIO_RESET_PURGE_TX 2
-
-#define FTDI_SIO_SET_BITMODE_REQUEST_TYPE 0x40
-#define FTDI_SIO_SET_BITMODE_REQUEST 0x0b
-#define FTDI_BITMODE_RESET 0x00
-#define FTDI_BITMODE_SYNC_FIFO 0x40
-
-#define FTDI_SIO_SET_LATENCY_TIMER_REQUEST_TYPE 0x40
-#define FTDI_SIO_SET_LATENCY_TIMER_REQUEST 0x09
-
-#define FTDI_SIO_SET_EVENT_CHAR_REQUEST_TYPE 0x40
-#define FTDI_SIO_SET_EVENT_CHAR_REQUEST 0x06
-
-#define FTDI_SIO_SET_USB_PARAMETERS_REQUEST_TYPE 0x40
-#define FTDI_SIO_SET_USB_PARAMETERS_REQUEST 0x07
-
-// USB interface
-#define FTDI_INTERFACE_A 0
 
 static int major_number;
 static struct class *camdrv_class = NULL;
@@ -93,13 +69,13 @@ static void camdrv_disconnect(struct usb_interface *interface);
 static int ftdi_init_sync_fifo(struct camdrv_device *dev);
 static int ftdi_control_request(struct usb_device *udev, u8 request_type, u8 request, u16 value, u16 index, void *data, u16 size);
 
-static int ccp_init(struct camdrv_device *dev, unsigned char crate_number);
 static int ccp_inout(struct camdrv_device *dev, unsigned int write_size, unsigned int read_size);
-static int initialize(struct camdrv_device *dev, unsigned crate_number);
-static int clear(struct camdrv_device *dev, unsigned crate_number);
-static int camac_action(struct camdrv_device *dev, unsigned crate, unsigned n, unsigned a, unsigned f, unsigned* data);
-static int read_lam(struct camdrv_device *dev, unsigned char crate_number, unsigned *data);
-static int wait_lam(struct camdrv_device *dev, unsigned char crate_number, unsigned timeout, unsigned* data);
+static int ccp_init(struct camdrv_device *dev, unsigned char crate_number);
+static int ccp_initialize(struct camdrv_device *dev, unsigned crate_number);
+static int ccp_clear(struct camdrv_device *dev, unsigned crate_number);
+static int ccp_camac_action(struct camdrv_device *dev, unsigned crate, unsigned n, unsigned a, unsigned f, unsigned* data);
+static int ccp_read_lam(struct camdrv_device *dev, unsigned char crate_number, unsigned *data);
+static int ccp_wait_lam(struct camdrv_device *dev, unsigned char crate_number, unsigned timeout, unsigned* data);
 
 
 static const struct file_operations camdrv_fops = {
@@ -115,7 +91,6 @@ static struct usb_driver camdrv_driver = {
     .disconnect = camdrv_disconnect,
     .id_table = camdrv_table,
 };
-
 
 
 static int __init camdrv_init(void)
@@ -356,10 +331,10 @@ static long camdrv_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
     
     switch (cmd) {
       case CAMDRV_IOC_INITIALIZE:
-        result = initialize(dev, crate_number);
+        result = ccp_initialize(dev, crate_number);
         break;
       case CAMDRV_IOC_CLEAR:
-        result = clear(dev, crate_number);
+        result = ccp_clear(dev, crate_number);
         break;
       case CAMDRV_IOC_INHIBIT:
         result = -EINVAL;
@@ -377,15 +352,15 @@ static long camdrv_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
         n = (parameter >> 9) & 0x1f;
         a = (parameter >> 5) & 0x0f;
         f = (parameter >> 0) & 0x1f;
-        result = camac_action(dev, crate_number, n, a, f, &data);
+        result = ccp_camac_action(dev, crate_number, n, a, f, &data);
         put_user(data, user_data_ptr);
         break;
       case CAMDRV_IOC_READ_LAM:
-        result = read_lam(dev, crate_number, &data);
+        result = ccp_read_lam(dev, crate_number, &data);
         put_user(data, user_data_ptr);
         break;
       case CAMDRV_IOC_WAIT_LAM:
-        result = wait_lam(dev, crate_number, parameter, &data);
+        result = ccp_wait_lam(dev, crate_number, parameter, &data);
         put_user(data, user_data_ptr);
         break;
       case CAMDRV_IOC_SET_CRATE:
@@ -403,6 +378,29 @@ static long camdrv_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 
 //// FTDI ////
+
+#define FTDI_SIO_RESET_REQUEST_TYPE 0x40
+#define FTDI_SIO_RESET_REQUEST 0x00
+#define FTDI_SIO_RESET_SIO 0
+#define FTDI_SIO_RESET_PURGE_RX 1
+#define FTDI_SIO_RESET_PURGE_TX 2
+
+#define FTDI_SIO_SET_BITMODE_REQUEST_TYPE 0x40
+#define FTDI_SIO_SET_BITMODE_REQUEST 0x0b
+#define FTDI_BITMODE_RESET 0x00
+#define FTDI_BITMODE_SYNC_FIFO 0x40
+
+#define FTDI_SIO_SET_LATENCY_TIMER_REQUEST_TYPE 0x40
+#define FTDI_SIO_SET_LATENCY_TIMER_REQUEST 0x09
+
+#define FTDI_SIO_SET_EVENT_CHAR_REQUEST_TYPE 0x40
+#define FTDI_SIO_SET_EVENT_CHAR_REQUEST 0x06
+
+#define FTDI_SIO_SET_USB_PARAMETERS_REQUEST_TYPE 0x40
+#define FTDI_SIO_SET_USB_PARAMETERS_REQUEST 0x07
+
+#define FTDI_INTERFACE_A 0
+
 
 // Helper function to send FTDI control request
 static int ftdi_control_request(struct usb_device *udev, u8 request_type, u8 request, u16 value, u16 index, void *data, u16 size)
@@ -500,47 +498,6 @@ enum ccp_ctrlbits {
 };
 
 
-static int ccp_init(struct camdrv_device *dev, unsigned char crate_number)
-{
-    unsigned char cc_com = cmdINITIALIZE_CCP;
-    int result;
-
-    if (crate_number < 1 || crate_number > 7) {
-        return -EINVAL;
-    }
-
-    // Reset device
-    result = ftdi_control_request(
-        dev->udev, FTDI_SIO_RESET_REQUEST_TYPE,
-        FTDI_SIO_RESET_REQUEST,
-        FTDI_SIO_RESET_SIO, FTDI_INTERFACE_A,
-        NULL, 0
-    );
-    if (result < 0) {
-        return result;
-    }
-
-    // Prepare command
-    dev->tx_buffer[0] = (cc_com << 4);
-    dev->tx_buffer[1] = (cc_com & 0xF0);
-    dev->tx_buffer[2] = (crate_number << 4);
-    dev->tx_buffer[3] = (crate_number & 0xF0);
-    
-    // Send and receive
-    result = ccp_inout(dev, 4, 4);
-    if (result < 0) {
-        return result;
-    }
-
-    // Extract result
-    result = (
-        ((dev->rx_buffer[dev->start_n + 1] & 0x0F) << 4) | (dev->rx_buffer[dev->start_n] & 0x0F)
-    );
-
-    return result;
-}
-
-
 static int ccp_inout(struct camdrv_device *dev, unsigned int write_size, unsigned int read_size)
 {
     struct usb_device *udev = dev->udev;
@@ -604,19 +561,60 @@ static int ccp_inout(struct camdrv_device *dev, unsigned int write_size, unsigne
 }
 
 
-static int initialize(struct camdrv_device *dev, unsigned crate_number)
+static int ccp_init(struct camdrv_device *dev, unsigned char crate_number)
 {
-    return camac_action(dev, crate_number, 0, 0, ctrlINITIALIZE, 0);
+    unsigned char cc_com = cmdINITIALIZE_CCP;
+    int result;
+
+    if (crate_number < 1 || crate_number > 7) {
+        return -EINVAL;
+    }
+
+    // Reset device
+    result = ftdi_control_request(
+        dev->udev, FTDI_SIO_RESET_REQUEST_TYPE,
+        FTDI_SIO_RESET_REQUEST,
+        FTDI_SIO_RESET_SIO, FTDI_INTERFACE_A,
+        NULL, 0
+    );
+    if (result < 0) {
+        return result;
+    }
+
+    // Prepare command
+    dev->tx_buffer[0] = (cc_com << 4);
+    dev->tx_buffer[1] = (cc_com & 0xF0);
+    dev->tx_buffer[2] = (crate_number << 4);
+    dev->tx_buffer[3] = (crate_number & 0xF0);
+    
+    // Send and receive
+    result = ccp_inout(dev, 4, 4);
+    if (result < 0) {
+        return result;
+    }
+
+    // Extract result
+    result = (
+        ((dev->rx_buffer[dev->start_n + 1] & 0x0F) << 4) | (dev->rx_buffer[dev->start_n] & 0x0F)
+    );
+
+    return result;
 }
 
 
-static int clear(struct camdrv_device *dev, unsigned crate_number)
+static int ccp_initialize(struct camdrv_device *dev, unsigned crate_number)
 {
-    return camac_action(dev, crate_number, 0, 0, ctrlCLEAR, 0);
+    return ccp_camac_action(dev, crate_number, 0, 0, ctrlINITIALIZE, 0);
 }
 
 
-static int camac_action(struct camdrv_device *dev, unsigned crate_number, unsigned n, unsigned a, unsigned f, unsigned* data)
+static int ccp_clear(struct camdrv_device *dev, unsigned crate_number)
+{
+    return ccp_camac_action(dev, crate_number, 0, 0, ctrlCLEAR, 0);
+}
+
+
+static int ccp_camac_action(struct camdrv_device *dev, unsigned crate_number, unsigned n, unsigned a, unsigned f, unsigned* data)
 {
     unsigned char cmd = cmdCAMAC;
     unsigned dl, dm, dh;
@@ -685,7 +683,7 @@ static int camac_action(struct camdrv_device *dev, unsigned crate_number, unsign
 }
 
 
-static int read_lam(struct camdrv_device *dev, unsigned char crate_number, unsigned *data)
+static int ccp_read_lam(struct camdrv_device *dev, unsigned char crate_number, unsigned *data)
 {
     unsigned char cmd = cmdLAM;
     unsigned reply, encoded_lam = 0;
@@ -722,14 +720,14 @@ static int read_lam(struct camdrv_device *dev, unsigned char crate_number, unsig
 }
 
 
-static int wait_lam(struct camdrv_device *dev, unsigned char crate_number, unsigned timeout, unsigned* data)
+static int ccp_wait_lam(struct camdrv_device *dev, unsigned char crate_number, unsigned timeout, unsigned* data)
 {
     unsigned long timeout_jiffies;
 
     /* The hardware does not support "interrupt on LAM". */
     /* The following code is a "polling loop" to wait for any LAM bits. */
     timeout_jiffies = jiffies + timeout * HZ;
-    while ((read_lam(dev, crate_number, data) >= 0) && (*data == 0)) {
+    while ((ccp_read_lam(dev, crate_number, data) >= 0) && (*data == 0)) {
         schedule();
         if (jiffies > timeout_jiffies) {
             *data = 0;
