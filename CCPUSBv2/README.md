@@ -165,6 +165,4 @@ Sanshiro Enomoto (University of Washington, Seattle)
 ## 更新履歴
 
 - 2013年10月3日: 初版作成（Linux 3.x 用）
-- 2015年8月1日: 最終更新
-- 最新版: 最新の Linux カーネル形式に更新
-
+- 2025年11月9日: CCP-USB(V2) 対応，Linux Kernel 6.x 形式に更新

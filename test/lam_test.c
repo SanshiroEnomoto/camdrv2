@@ -21,7 +21,7 @@ int main(void)
     CGENZ();
     
     for (i = 0; i < 16; i++) {
-        printf("Waiting LAM ...");
+        printf("Waiting for a LAM ...");
         result = CWLAM(timeout);
 
         if (result == 0) {

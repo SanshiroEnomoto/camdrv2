@@ -75,7 +75,6 @@ def CSETCR(crate_number):
         return errno.EBADF
     
     try:
-        # unsigned[2]の配列をパック（リトルエンディアン）
         ioctl_data = struct.pack('<II', crate_number, 0)
         fcntl.ioctl(_device_descriptor, CAMDRV_IOC_SET_CRATE, ioctl_data)
         return 0
@@ -118,7 +117,6 @@ def CAMAC(n, a, f, data):
         return (errno.EBADF, data, 0, 0)
     
     try:
-        # unsigned[2]の配列をパック
         naf = ((n << 9) | (a << 5) | f) & 0x3fff
         ioctl_data = struct.pack('<II', naf, data & 0x00ffffff)
         result = fcntl.ioctl(_device_descriptor, CAMDRV_IOC_CAMAC_ACTION, ioctl_data)

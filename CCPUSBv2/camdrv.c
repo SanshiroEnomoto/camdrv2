@@ -18,8 +18,8 @@
 
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Enomoto Sanshiro");
-MODULE_DESCRIPTION("Camac Driver for Hoshin CCP-USB(V2) Controller");
+MODULE_AUTHOR("Sanshiro Enomoto");
+MODULE_DESCRIPTION("CAMAC Driver for Hoshin CCP-USB(V2) Controller");
 MODULE_VERSION("1.00");
 
 #define DRIVER_NAME "camdrv"
@@ -342,12 +342,12 @@ static long camdrv_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
         return -EINVAL;
     }
     if (_IOC_DIR(cmd) & (_IOC_READ | _IOC_WRITE)) {
-	if (get_user(parameter, user_parameter_ptr) < 0) {
-	    return -EFAULT;
-	}
-	if (get_user(data, user_data_ptr) < 0) {
-	    return -EFAULT;
-	}
+        if (get_user(parameter, user_parameter_ptr) < 0) {
+            return -EFAULT;
+        }
+        if (get_user(data, user_data_ptr) < 0) {
+            return -EFAULT;
+        }
     }
 
     if (mutex_lock_interruptible(&dev->mutex)) {
@@ -362,16 +362,16 @@ static long camdrv_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
         result = clear(dev, crate_number);
         break;
       case CAMDRV_IOC_INHIBIT:
-	result = -EINVAL;
+        result = -EINVAL;
         break;
       case CAMDRV_IOC_RELEASE_INHIBIT:
-	result = -EINVAL;
+        result = -EINVAL;
         break;
       case CAMDRV_IOC_ENABLE_INTERRUPT:
-	result = -EINVAL;
+        result = -EINVAL;
         break;
       case CAMDRV_IOC_DISABLE_INTERRUPT:
-	result = -EINVAL;
+        result = -EINVAL;
         break;
       case CAMDRV_IOC_CAMAC_ACTION:
         n = (parameter >> 9) & 0x1f;
@@ -393,7 +393,7 @@ static long camdrv_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
         result = ccp_init(dev, crate_number);
         break;
       default:
-	result = -EINVAL;
+        result = -EINVAL;
     }
 
     mutex_unlock(&dev->mutex);
@@ -730,11 +730,11 @@ static int wait_lam(struct camdrv_device *dev, unsigned char crate_number, unsig
     /* The following code is a "polling loop" to wait for any LAM bits. */
     timeout_jiffies = jiffies + timeout * HZ;
     while ((read_lam(dev, crate_number, data) >= 0) && (*data == 0)) {
-	schedule();
-	if (jiffies > timeout_jiffies) {
-	    *data = 0;
-	    return -ETIMEDOUT;
-	}
+        schedule();
+        if (jiffies > timeout_jiffies) {
+            *data = 0;
+            return -ETIMEDOUT;
+        }
     }
 
     return *data;
