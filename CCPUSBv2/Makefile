@@ -2,6 +2,7 @@ TARGET = camdrv
 
 obj-m = $(TARGET).o
 KDIR := /lib/modules/$(shell uname -r)/build
+EXTRA_CFLAGS += -Wno-unused-function
 PWD := $(shell pwd)
 
 

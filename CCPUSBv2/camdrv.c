@@ -76,6 +76,9 @@ static int ccp_clear(struct camdrv_device *dev, unsigned crate_number);
 static int ccp_camac_action(struct camdrv_device *dev, unsigned crate, unsigned n, unsigned a, unsigned f, unsigned* data);
 static int ccp_read_lam(struct camdrv_device *dev, unsigned char crate_number, unsigned *data);
 static int ccp_wait_lam(struct camdrv_device *dev, unsigned char crate_number, unsigned timeout, unsigned* data);
+static unsigned ccp_read_register(struct camdrv_device *dev, unsigned char crate_number, unsigned address, unsigned *data);
+static unsigned ccp_write_register(struct camdrv_device *dev, unsigned char crate_number, unsigned address, unsigned data);
+
 
 
 static const struct file_operations camdrv_fops = {
@@ -487,9 +490,11 @@ static int ftdi_init_sync_fifo(struct camdrv_device *dev)
 //// CCP ////
 
 enum ccp_command {
-    cmdINITIALIZE_CCP = 73,
-    cmdCAMAC = 67,
-    cmdLAM = 76
+    cmdINITIALIZE_CCP = 0x49,
+    cmdCAMAC = 0x43,
+    cmdLAM = 0x4c,
+    cmdWRITE_REG = 0x57,
+    cmdREAD_REG = 0x52
 };
 
 enum ccp_ctrlbits {
@@ -612,12 +617,14 @@ static int ccp_init(struct camdrv_device *dev, unsigned char crate_number)
 
 static int ccp_initialize(struct camdrv_device *dev, unsigned crate_number)
 {
+    // return ccp_write_register(dev, crate_number, 5, ctrlINITIALIZE);  //????
     return ccp_camac_action(dev, crate_number, 0, 0, ctrlINITIALIZE, 0);
 }
 
 
 static int ccp_clear(struct camdrv_device *dev, unsigned crate_number)
 {
+    // return ccp_write_register(dev, crate_number, 5, ctrlCLEAR);  //????
     return ccp_camac_action(dev, crate_number, 0, 0, ctrlCLEAR, 0);
 }
 
@@ -745,4 +752,67 @@ static int ccp_wait_lam(struct camdrv_device *dev, unsigned char crate_number, u
     }
 
     return *data;
+}
+
+
+static unsigned ccp_write_register(struct camdrv_device *dev, unsigned char crate_number, unsigned /*address*/, unsigned data)
+{
+    unsigned char cmd = cmdWRITE_REG;
+    int result;
+    
+    if (crate_number < 1 || crate_number > 7) {
+        return -EINVAL;
+    }
+
+    dev->tx_buffer[0] = (cmd << 4);
+    dev->tx_buffer[1] = (cmd & 0xF0);
+    dev->tx_buffer[2] = (crate_number << 4);
+    dev->tx_buffer[3] = (crate_number & 0xF0);
+    dev->tx_buffer[4] = ((data & 0x0f) << 4);
+    dev->tx_buffer[5] = (data & 0xf0);
+
+
+    //??? where does the address go?
+    
+    result = ccp_inout(dev, 6, 2);
+    if (result < 0) {
+        return result;
+    }
+}
+
+
+static unsigned ccp_read_register(struct camdrv_device *dev, unsigned char crate_number, unsigned /*address*/, unsigned *data)
+{
+    unsigned char cmd = cmdREAD_REG;
+    unsigned reply;
+    int result;
+    
+    if (crate_number < 1 || crate_number > 7) {
+        return -EINVAL;
+    }
+
+    dev->tx_buffer[0] = (cmd << 4);
+    dev->tx_buffer[1] = (cmd & 0xF0);
+    dev->tx_buffer[2] = (crate_number << 4);
+    dev->tx_buffer[3] = (crate_number & 0xF0);
+
+    //??? where does the address go?
+    
+    result = ccp_inout(dev, 4, 4);
+    if (result < 0) {
+        return result;
+    }
+
+    reply = (
+        ((unsigned short)(dev->rx_buffer[dev->start_n + 3] & 0x0F) << 12) |
+        ((unsigned short)(dev->rx_buffer[dev->start_n + 2] & 0x0F) << 8) |
+        ((unsigned short)(dev->rx_buffer[dev->start_n + 1] & 0x0F) << 4) |
+        ((unsigned short)(dev->rx_buffer[dev->start_n] & 0x0F))
+    );
+
+    if (data) {
+        *data = reply;
+    }
+
+    return result;
 }
