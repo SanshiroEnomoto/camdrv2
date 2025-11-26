@@ -4,6 +4,7 @@
 
 
 #include <stdio.h>
+#include <unistd.h>
 #include "toyocamac.h"
 
 #define FUNCTION_READ 0 
@@ -21,13 +22,13 @@ int main(void)
     unsigned nxq;
 
     /* set crate number if necessary (default is 0) */
-    /* setcn(0); */
+    /**/ setcn(1);
 
-    execz();
+    //execz();
     
     for (event_count = 0; event_count < number_of_events; event_count++) {
         while (! (lam_bits = rlam())) {
-	    ;
+	    usleep(10000000);
 	}
 	fprintf(stderr, "LAM BITS: %04x\n", lam_bits);
 #ifdef DEBUG

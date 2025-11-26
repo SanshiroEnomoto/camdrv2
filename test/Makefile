@@ -6,8 +6,11 @@
 CC = gcc
 CFLAGS = -O -Wall -I/usr/include -Wno-unused-result -I..
 
-all: inhibit_test lam_test camaction_test poll_test speed_test
+all: initialize_test inhibit_test lam_test camaction_test poll_test speed_test
 
+
+initialize_test: initialize_test.o
+	$(CC) $(CFLAGS) -o $@ $@.o ../camlib.o
 
 inhibit_test: inhibit_test.o
 	$(CC) $(CFLAGS) -o $@ $@.o ../camlib.o

@@ -9,35 +9,25 @@
 
 int main(void)
 {
-    if (COPEN() < 0) {
+    if (COPEN() != 0) {
         perror("COPEN()");
         return -1;
     }
 
+#if 0
     /* set crate number if necessary (default is 0) */
-    if (CSETCR(0) < 0) {
+    if (CSETCR(0) != 0) {
         perror("CSETCR()");
         return -1;
     }
+#endif
 
-    if (CGENZ() < 0) {
+    if (CGENZ() != 0) {
         perror("CGENZ()");
         return -1;
     }
-    
-    printf("press <ENTER> to set inhibit...");
-    (void) getchar();
-    if (CSETI() < 0) {
-        perror("CSETI()");
-    }
-    
-    printf("press <ENTER> to release inhibit...");
-    (void) getchar();
-    if (CREMI() < 0) {
-        perror("CREMI()");
-    }
 
-    if (CCLOSE() < 0) {
+    if (CCLOSE() != 0) {
         perror("CCLOSE()");
     }
 

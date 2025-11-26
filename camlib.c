@@ -3,6 +3,7 @@
 /* Last updated by Sanshiro Enomoto on 18 September 2002. */
 
 
+#include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
