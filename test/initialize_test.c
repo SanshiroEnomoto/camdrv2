@@ -15,8 +15,8 @@ int main(void)
     }
 
 #if 0
-    /* set crate number if necessary (default is 0) */
-    if (CSETCR(0) != 0) {
+    /* set crate number if necessary (default is 1) */
+    if (CSETCR(1) != 0) {
         perror("CSETCR()");
         return -1;
     }
@@ -24,6 +24,11 @@ int main(void)
 
     if (CGENZ() != 0) {
         perror("CGENZ()");
+        return -1;
+    }
+
+    if (CGENC() != 0) {
+        perror("CGENC()");
         return -1;
     }
 

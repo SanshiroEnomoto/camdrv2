@@ -3,11 +3,16 @@
 # Last updated by Enomoto Sanshiro on 23 July 1999.
 
 
+TARGETS = initialize_test inhibit_test lam_test camaction_test poll_test speed_test test
+
 CC = gcc
 CFLAGS = -O -Wall -I/usr/include -Wno-unused-result -I..
 
-all: initialize_test inhibit_test lam_test camaction_test poll_test speed_test
+all: $(TARGETS)
 
+
+test: test.o
+	$(CC) $(CFLAGS) -o $@ $@.o ../camlib.o
 
 initialize_test: initialize_test.o
 	$(CC) $(CFLAGS) -o $@ $@.o ../camlib.o
@@ -34,5 +39,5 @@ speed_test: speed_test.o
 
 clean:
 	rm -f *.o
-	rm -f inhibit_test lam_test camaction_test poll_test speed_test
+	rm -f $(TARGETS)
 

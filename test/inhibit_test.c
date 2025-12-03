@@ -14,8 +14,8 @@ int main(void)
         return -1;
     }
 
-    /* set crate number if necessary (default is 0) */
-    if (CSETCR(0) < 0) {
+    /* set crate number if necessary (default is 1) */
+    if (CSETCR(1) < 0) {
         perror("CSETCR()");
         return -1;
     }

@@ -1,6 +1,6 @@
 /* camdrv.c */
 /* Created by Sanshiro Enomoto on 11 April 1999 */
-/* Last updated by Sanshiro Enomoto on 8 November 2025 */
+/* Last updated by Sanshiro Enomoto on 1 December 2025 */
 
 
 #include <linux/module.h>
@@ -12,6 +12,7 @@
 #include <linux/uaccess.h>
 #include <linux/slab.h>
 #include <linux/mutex.h>
+#include <linux/delay.h>
 #include <linux/ioctl.h>
 #include <linux/types.h>
 #include "camdrv.h"
@@ -29,8 +30,10 @@ MODULE_VERSION("1.00");
 
 #define BUFFER_SIZE 64
 #define LATENCY_TIME 2
-#define EE_BUFFER_SIZE 512
-#define SET_RD_SIZE 512
+//#define EE_BUFFER_SIZE 512
+#define EE_BUFFER_SIZE 1024
+//#define SET_RD_SIZE 512
+#define SET_RD_SIZE 1024
 #define TIMEOUT_MS 500
 
 // Debug support: define DEBUG to enable debug messages
@@ -86,8 +89,8 @@ static int ccp_clear(struct camdrv_device *dev, unsigned crate_number);
 static int ccp_camac_action(struct camdrv_device *dev, unsigned crate, unsigned n, unsigned a, unsigned f, unsigned* data);
 static int ccp_read_lam(struct camdrv_device *dev, unsigned char crate_number, unsigned *data);
 static int ccp_wait_lam(struct camdrv_device *dev, unsigned char crate_number, unsigned timeout, unsigned* data);
-static unsigned ccp_read_register(struct camdrv_device *dev, unsigned char crate_number, unsigned address, unsigned *data);
-static unsigned ccp_write_register(struct camdrv_device *dev, unsigned char crate_number, unsigned address, unsigned data);
+static int ccp_read_register(struct camdrv_device *dev, unsigned char crate_number, unsigned address, unsigned *data);
+static int ccp_write_register(struct camdrv_device *dev, unsigned char crate_number, unsigned address, unsigned data);
 
 
 
@@ -229,7 +232,7 @@ static int camdrv_probe(struct usb_interface *interface, const struct usb_device
     
     mutex_init(&dev->mutex);
     dev->is_open = false;
-    dev->crate_number = 1;  // in CCP, crate 0 -> number 1
+    dev->crate_number = 1;
     
     cdev_init(&dev->cdev, &camdrv_fops);
     dev->cdev.owner = THIS_MODULE;
@@ -438,7 +441,7 @@ static long camdrv_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
         break;
       case CAMDRV_IOC_SET_CRATE:
         dbg_dev_print(dev, "camdrv_ioctl: SET_CRATE, old=%u, new=%u\n", crate_number, parameter + 1);
-        dev->crate_number = parameter + 1;   // in CCP, crate 0 -> number 1
+        dev->crate_number = parameter;
         result = ccp_init(dev, dev->crate_number);
         dbg_dev_print(dev, "camdrv_ioctl: SET_CRATE result=%d\n", result);
         break;
@@ -619,9 +622,9 @@ static int ccp_inout(struct camdrv_device *dev, unsigned int write_size, unsigne
     }
 
     // Print TX buffer
-    dbg_dev_print(dev, "ccp_inout: TX buffer (first %u bytes): ", write_size < 16 ? write_size : 16);
-    for (i = 0; i < write_size && i < 16; i++) {
-        dbg_print("%02x ", dev->tx_buffer[i]);
+    dbg_dev_print(dev, "ccp_inout: TX buffer (%u bytes): ", write_size);
+    for (i = 0; i < write_size; i++) {
+        dbg_print("TX %d: %02x ", i, dev->tx_buffer[i]);
     }
     dbg_print("==(end TX)==\n");
 
@@ -633,6 +636,7 @@ static int ccp_inout(struct camdrv_device *dev, unsigned int write_size, unsigne
         FTDI_SIO_RESET_PURGE_RX, FTDI_INTERFACE_A,
         NULL, 0
     );
+    //udelay(10);
 
     // Write data
     dbg_dev_print(
@@ -649,7 +653,12 @@ static int ccp_inout(struct camdrv_device *dev, unsigned int write_size, unsigne
         return -EIO;
     }
     dbg_dev_print(dev, "ccp_inout: wrote %d bytes (expected %u)\n", actual_length, write_size);
+    //udelay(10);
 
+    if (read_size == 0) {
+        return 0;
+    }
+    
     // Read data
     dbg_dev_print(
         dev, "ccp_inout: reading from endpoint 0x%02x (max %u bytes)\n",
@@ -684,27 +693,29 @@ static int ccp_inout(struct camdrv_device *dev, unsigned int write_size, unsigne
             break;
         }
     }
+    
+    // DEBUG: Print RX buffer
+    dbg_dev_print(
+        dev, "ccp_inout: RX buffer (first %u bytes out of %u received): ", 
+        actual_length < 32 ? actual_length : 32,
+        actual_length
+    );
+    for (i = 0; i < actual_length && i < 32; i++) {
+        if (i >= start_n && i < start_n + read_size) {
+            dbg_print("RX %03d: %02x ", i, dev->rx_buffer[i]);
+        }
+        else {
+            dbg_print("RX %03d: (%02x) ", i, dev->rx_buffer[i]);
+        }
+    }
+    dbg_print("==(end RX)==\n");
+
     if (start_n < 0) {
         dev_err(&udev->dev, "ccp_inout: start marker 0x43 not found in response\n");
         return -EIO;
     }
     dbg_dev_print(dev, "ccp_inout: found start marker at position %u\n", start_n);
     dev->start_n = start_n;
-
-    // Print RX buffer
-    dbg_dev_print(
-        dev, "ccp_inout: RX buffer (first %u bytes): ", 
-        actual_length < 32 ? actual_length : 32
-    );
-    for (i = 0; i < actual_length && i < 32; i++) {
-        if (i >= start_n && i < start_n + read_size) {
-            dbg_print("%02x ", dev->rx_buffer[i]);
-        }
-        else {
-            dbg_print("(%02x) ", dev->rx_buffer[i]);
-        }
-    }
-    dbg_print("==(end RX)==\n");
 
     return 0;
 }
@@ -764,15 +775,13 @@ static int ccp_init(struct camdrv_device *dev, unsigned char crate_number)
 
 static int ccp_initialize(struct camdrv_device *dev, unsigned crate_number)
 {
-    // return ccp_write_register(dev, crate_number, 5, ctrlINITIALIZE);  //????
-    return ccp_camac_action(dev, crate_number, 0, 0, ctrlINITIALIZE, 0);
+     return ccp_write_register(dev, crate_number, 5, ctrlINITIALIZE);
 }
 
 
 static int ccp_clear(struct camdrv_device *dev, unsigned crate_number)
 {
-    // return ccp_write_register(dev, crate_number, 5, ctrlCLEAR);  //????
-    return ccp_camac_action(dev, crate_number, 0, 0, ctrlCLEAR, 0);
+     return ccp_write_register(dev, crate_number, 5, ctrlCLEAR);
 }
 
 
@@ -784,19 +793,13 @@ static int ccp_camac_action(struct camdrv_device *dev, unsigned crate_number, un
     unsigned status, nq, nx;
     int result;
     
-    dbg_dev_print(dev, "ccp_camac_action: crate=%u, n=%u, a=%u, f=%u, data=%p\n", crate_number, n, a, f, data);
+    dbg_dev_print(dev, "ccp_camac_action: crate=%u, n=%u, a=%u, f=%u, &data=%p\n", crate_number, n, a, f, data);
     
-    if (crate_number <= 0  || crate_number >= 8) {
+    if (crate_number < 1  || crate_number > 7) {
         dev_err(&dev->udev->dev, "ccp_camac_action: invalid crate number %u\n", crate_number);
         return -EINVAL;
     }
-    if (n == 0 && a == 0) {
-        if (f > 64) {
-            dev_err(&dev->udev->dev, "ccp_camac_action: invalid parameters n=%u, a=%u, f=%u\n", n, a, f);
-            return -EINVAL;
-        }
-    }
-    else if (n >= 24 || a >= 16 || f >= 32) {
+    if (n == 0 || n >= 24 || a >= 16 || f >= 32) {
         dev_err(&dev->udev->dev, "ccp_camac_action: invalid parameters n=%u, a=%u, f=%u\n", n, a, f);
         return -EINVAL;
     }
@@ -837,7 +840,9 @@ static int ccp_camac_action(struct camdrv_device *dev, unsigned crate_number, un
     result = ccp_inout(dev, 16, read_size);
     if (result < 0) {
         dev_err(&dev->udev->dev, "ccp_camac_action: ccp_inout failed: %d\n", result);
-        return result;
+        nq = 1;
+        nx = 1;
+        return (nx << 1) | nq;
     }
     
     if ((f <= 15) && data) {
@@ -904,9 +909,9 @@ static int ccp_read_lam(struct camdrv_device *dev, unsigned char crate_number, u
     if (encoded_lam > 0) {
         *data = 0x0001 << (encoded_lam - 1);
     }
-    dbg_dev_print(dev, "ccp_read_lam: encoded_lam=%u, data=0x%08x\n", encoded_lam, *data);
+    dbg_dev_print(dev, "ccp_read_lam: encoded_lam=0x%x, status=0x%x\n", encoded_lam, (reply & 0xff));
 
-    return *data;
+    return 0;
 }
 
 
@@ -918,7 +923,7 @@ static int ccp_wait_lam(struct camdrv_device *dev, unsigned char crate_number, u
     /* The following code is a "polling loop" to wait for any LAM bits. */
     timeout_jiffies = jiffies + timeout * HZ;
     while ((ccp_read_lam(dev, crate_number, data) >= 0) && (*data == 0)) {
-        schedule();
+        usleep_range(50, 500);
         if (jiffies > timeout_jiffies) {
             *data = 0;
             return -ETIMEDOUT;
@@ -929,7 +934,7 @@ static int ccp_wait_lam(struct camdrv_device *dev, unsigned char crate_number, u
 }
 
 
-static unsigned ccp_write_register(struct camdrv_device *dev, unsigned char crate_number, unsigned /*address*/, unsigned data)
+static int ccp_write_register(struct camdrv_device *dev, unsigned char crate_number, unsigned /*address*/, unsigned data)
 {
     unsigned char cmd = cmdWRITE_REG;
     int result;
@@ -948,14 +953,16 @@ static unsigned ccp_write_register(struct camdrv_device *dev, unsigned char crat
 
     //??? where does the address go?
     
-    result = ccp_inout(dev, 6, 2);
+    result = ccp_inout(dev, 6, 0);
     if (result < 0) {
         return result;
     }
+
+    return 0;
 }
 
 
-static unsigned ccp_read_register(struct camdrv_device *dev, unsigned char crate_number, unsigned /*address*/, unsigned *data)
+static int ccp_read_register(struct camdrv_device *dev, unsigned char crate_number, unsigned /*address*/, unsigned *data)
 {
     unsigned char cmd = cmdREAD_REG;
     unsigned reply;
@@ -988,5 +995,5 @@ static unsigned ccp_read_register(struct camdrv_device *dev, unsigned char crate
         *data = reply;
     }
 
-    return result;
+    return 0;
 }
