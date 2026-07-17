@@ -94,6 +94,7 @@ int CAMAC(int naf, int *data, int *q, int *x)
 
 int CELAM(int mask)
 {
+    // not supported
     int result; 
     result = ioctl(device_descripter, CAMDRV_IOC_ENABLE_INTERRUPT);
 
@@ -102,6 +103,7 @@ int CELAM(int mask)
 
 int CDLAM(void)
 {
+    // not supported
     int result; 
     result = ioctl(device_descripter, CAMDRV_IOC_DISABLE_INTERRUPT);
 

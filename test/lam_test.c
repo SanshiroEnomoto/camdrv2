@@ -13,14 +13,15 @@ int main(void)
     int timeout = 3;  /* sec */
     int result;
     int i;
-
+#if 1
     if (COPEN() != 0) {
         perror("COPEN()");
         return -1;
     }
 
     /* set crate number if necessary (default is 1) */
-    if (CSETCR(1) != 0) {
+    unsigned crate_number = 1;
+    if (CSETCR(crate_number) != 0) {
         perror("CSETCR()");
         return -1;
     }
@@ -29,15 +30,17 @@ int main(void)
         perror("CGENZ()");
         return -1;
     }
-
+#endif
 #if 1
     // enable LAM (F26)
     f = 26;
-    CAMAC(NAF(n, a, f), &data, &q, &x);
+    result = CAMAC(NAF(n, a, f), &data, &q, &x);
+    printf("NAF:%d,%d,%d, data:%06x, q:%d, x:%d, result=%d\n", n,a,f, data, q, x, result);
 
     // clear LAM (F10)
-    f = 10;
-    CAMAC(NAF(n, a, f), &data, &q, &x);
+    f = 9;
+    result = CAMAC(NAF(n, a, f), &data, &q, &x);
+    printf("NAF:%d,%d,%d, data:%06x, q:%d, x:%d, result=%d\n", n,a,f, data, q, x, result);
 #endif
 
     for (i = 0; i < 16; i++) {
@@ -52,9 +55,22 @@ int main(void)
 	}
 
 #if 1
+        a = 0; f = 8;
+        result = CAMAC(NAF(n, a, f), &data, &q, &x);
+        printf("8888 NAF:%d,%d,%d, data:%06x, q:%d, x:%d, result=%d\n", n,a,f, data, q, x, result);
+#endif
+#if 1
+        a = 0; f = 0;
+        result = CAMAC(NAF(n, a, f), &data, &q, &x);
+        printf("NAF:%d,%d,%d, data:%06x, q:%d, x:%d, result=%d\n", n,a,f, data, q, x, result);
+#endif
+
+    
+#if 1
         // clear LAM (F10)
-        f = 10;
-        CAMAC(NAF(n, a, f), &data, &q, &x);
+        f = 9;
+        result = CAMAC(NAF(n, a, f), &data, &q, &x);
+        printf("NAF:%d,%d,%d, data:%06x, q:%d, x:%d, result=%d\n", n,a,f, data, q, x, result);
 #else
 	CGENC();
 	CGENZ();

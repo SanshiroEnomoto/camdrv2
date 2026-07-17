@@ -14,13 +14,12 @@ int main(void)
         return -1;
     }
 
-#if 0
     /* set crate number if necessary (default is 1) */
-    if (CSETCR(1) != 0) {
+    unsigned crate_number = 1;
+    if (CSETCR(crate_number) != 0) {
         perror("CSETCR()");
         return -1;
     }
-#endif
 
     if (CGENZ() != 0) {
         perror("CGENZ()");

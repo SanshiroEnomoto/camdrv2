@@ -23,7 +23,7 @@ int main(void)
         return -1;
     }
 
-#if 1
+#if 0
     a = 0; f = 16; data = 0x555555;
     CAMAC(NAF(n, a, f), &data, &q, &x);
     printf("NAF:%d,%d,%d, data:%06x, q:%d, x:%d\n", n,a,f, data, q, x);
@@ -41,13 +41,13 @@ int main(void)
     printf("NAF:%d,%d,%d, data:%06x, q:%d, x:%d\n", n,a,f, data, q, x);
 #endif
 
-#if 0
+#if 1
     a = 0; f = 8;
     CAMAC(NAF(n, a, f), &data, &q, &x);
     printf("NAF:%d,%d,%d, data:%06x, q:%d, x:%d\n", n,a,f, data, q, x);
 #endif
 
-#if 0
+#if 1
     a = 0; f = 10;
     CAMAC(NAF(n, a, f), &data, &q, &x);
     printf("NAF:%d,%d,%d, data:%06x, q:%d, x:%d\n", n,a,f, data, q, x);

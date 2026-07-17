@@ -30,11 +30,8 @@ MODULE_VERSION("1.00");
 
 #define BUFFER_SIZE 64
 #define LATENCY_TIME 2
-//#define EE_BUFFER_SIZE 512
-#define EE_BUFFER_SIZE 1024
-//#define SET_RD_SIZE 512
-#define SET_RD_SIZE 1024
 #define TIMEOUT_MS 500
+#define USB_IN_TRANSFER_SIZE 512
 
 // Debug support: define DEBUG to enable debug messages
 #define DEBUG
@@ -89,7 +86,7 @@ static int ccp_clear(struct camdrv_device *dev, unsigned crate_number);
 static int ccp_camac_action(struct camdrv_device *dev, unsigned crate, unsigned n, unsigned a, unsigned f, unsigned* data);
 static int ccp_read_lam(struct camdrv_device *dev, unsigned char crate_number, unsigned *data);
 static int ccp_wait_lam(struct camdrv_device *dev, unsigned char crate_number, unsigned timeout, unsigned* data);
-static int ccp_read_register(struct camdrv_device *dev, unsigned char crate_number, unsigned address, unsigned *data);
+//static int ccp_read_register(struct camdrv_device *dev, unsigned char crate_number, unsigned address, unsigned *data);
 static int ccp_write_register(struct camdrv_device *dev, unsigned char crate_number, unsigned address, unsigned data);
 
 
@@ -221,7 +218,7 @@ static int camdrv_probe(struct usb_interface *interface, const struct usb_device
     }
     
     dev->tx_buffer = kmalloc(BUFFER_SIZE, GFP_KERNEL);
-    dev->rx_buffer = kmalloc(SET_RD_SIZE, GFP_KERNEL);
+    dev->rx_buffer = kmalloc(USB_IN_TRANSFER_SIZE, GFP_KERNEL);
     if (!dev->tx_buffer || !dev->rx_buffer) {
         dev_err(&interface->dev, "camdrv_probe: failed to allocate buffers\n");
         result = -ENOMEM;
@@ -462,8 +459,8 @@ static long camdrv_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 #define FTDI_SIO_RESET_REQUEST_TYPE 0x40
 #define FTDI_SIO_RESET_REQUEST 0x00
 #define FTDI_SIO_RESET_SIO 0
-#define FTDI_SIO_RESET_PURGE_RX 1
-#define FTDI_SIO_RESET_PURGE_TX 2
+#define FTDI_SIO_FLUSH_HOST_OUT 1
+#define FTDI_SIO_FLUSH_HOST_IN 2
 
 #define FTDI_SIO_SET_BITMODE_REQUEST_TYPE 0x40
 #define FTDI_SIO_SET_BITMODE_REQUEST 0x0b
@@ -476,10 +473,7 @@ static long camdrv_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 #define FTDI_SIO_SET_EVENT_CHAR_REQUEST_TYPE 0x40
 #define FTDI_SIO_SET_EVENT_CHAR_REQUEST 0x06
 
-#define FTDI_SIO_SET_USB_PARAMETERS_REQUEST_TYPE 0x40
-#define FTDI_SIO_SET_USB_PARAMETERS_REQUEST 0x07
-
-#define FTDI_INTERFACE_A 0
+#define FTDI_INTERFACE_A 1
 
 
 // Helper function to send FTDI control request
@@ -536,12 +530,11 @@ static int ftdi_init_sync_fifo(struct camdrv_device *dev)
     dbg_dev_print(dev, "ftdi_init_sync_fifo: bit mode reset successful\n");
 
     // Set synchronous FIFO mode (0xF0 = pin direction, 0x40 = sync FIFO mode)
-    dbg_dev_print(dev, "ftdi_init_sync_fifo: setting sync FIFO mode (value=0x%04x)\n", 
-                 (0xF0 << 8) | FTDI_BITMODE_SYNC_FIFO);
+    dbg_dev_print(dev, "ftdi_init_sync_fifo: setting sync FIFO mode (value=0x%04x)\n", (FTDI_BITMODE_SYNC_FIFO << 8) | 0xF0);
     result = ftdi_control_request(
         udev, FTDI_SIO_SET_BITMODE_REQUEST_TYPE,
         FTDI_SIO_SET_BITMODE_REQUEST,
-        (0xF0 << 8) | FTDI_BITMODE_SYNC_FIFO,
+        (FTDI_BITMODE_SYNC_FIFO << 8) | 0xF0,
         FTDI_INTERFACE_A, NULL, 0
     );
     if (result < 0) {
@@ -563,20 +556,6 @@ static int ftdi_init_sync_fifo(struct camdrv_device *dev)
         return result;
     }
     dbg_dev_print(dev, "ftdi_init_sync_fifo: latency timer set successfully\n");
-
-    // Set USB parameters (buffer size)
-    dbg_dev_print(dev, "ftdi_init_sync_fifo: setting USB buffer size to %d\n", EE_BUFFER_SIZE);
-    result = ftdi_control_request(
-        udev, FTDI_SIO_SET_USB_PARAMETERS_REQUEST_TYPE,
-        FTDI_SIO_SET_USB_PARAMETERS_REQUEST,
-        EE_BUFFER_SIZE, FTDI_INTERFACE_A,
-        NULL, 0
-    );
-    if (result < 0) {
-        dev_err(&udev->dev, "ftdi_init_sync_fifo: set USB parameters failed: %d\n", result);
-        return result;
-    }
-    dbg_dev_print(dev, "ftdi_init_sync_fifo: USB parameters set successfully\n");
 
     dbg_dev_print(dev, "ftdi_init_sync_fifo: initialization completed successfully\n");
     return 0;
@@ -633,7 +612,7 @@ static int ccp_inout(struct camdrv_device *dev, unsigned int write_size, unsigne
     ftdi_control_request(
         udev, FTDI_SIO_RESET_REQUEST_TYPE,
         FTDI_SIO_RESET_REQUEST,
-        FTDI_SIO_RESET_PURGE_RX, FTDI_INTERFACE_A,
+        FTDI_SIO_FLUSH_HOST_IN, FTDI_INTERFACE_A,
         NULL, 0
     );
     //udelay(10);
@@ -662,11 +641,11 @@ static int ccp_inout(struct camdrv_device *dev, unsigned int write_size, unsigne
     // Read data
     dbg_dev_print(
         dev, "ccp_inout: reading from endpoint 0x%02x (max %u bytes)\n",
-        dev->bulk_in->bEndpointAddress, SET_RD_SIZE
+        dev->bulk_in->bEndpointAddress, USB_IN_TRANSFER_SIZE
     );
     result = usb_bulk_msg(
         udev, usb_rcvbulkpipe(udev, dev->bulk_in->bEndpointAddress),
-        dev->rx_buffer, SET_RD_SIZE, &actual_length,
+        dev->rx_buffer, USB_IN_TRANSFER_SIZE, &actual_length,
         TIMEOUT_MS
     );
     if (result < 0) {
@@ -728,8 +707,13 @@ static int ccp_init(struct camdrv_device *dev, unsigned char crate_number)
 
     dbg_dev_print(dev, "ccp_init: initializing crate %u\n", crate_number);
 
+#if 0
     if (crate_number < 1 || crate_number > 7) {
         dev_err(&dev->udev->dev, "ccp_init: invalid crate number %u (must be 1-7)\n", crate_number);
+#else
+    if (crate_number > 7) {
+        dev_err(&dev->udev->dev, "ccp_init: invalid crate number %u (must be 0-7)\n", crate_number);
+#endif
         return -EINVAL;
     }
 
@@ -794,8 +778,11 @@ static int ccp_camac_action(struct camdrv_device *dev, unsigned crate_number, un
     int result;
     
     dbg_dev_print(dev, "ccp_camac_action: crate=%u, n=%u, a=%u, f=%u, &data=%p\n", crate_number, n, a, f, data);
-    
+#if 0    
     if (crate_number < 1  || crate_number > 7) {
+#else
+    if (crate_number > 7) {
+#endif
         dev_err(&dev->udev->dev, "ccp_camac_action: invalid crate number %u\n", crate_number);
         return -EINVAL;
     }
@@ -840,9 +827,13 @@ static int ccp_camac_action(struct camdrv_device *dev, unsigned crate_number, un
     result = ccp_inout(dev, 16, read_size);
     if (result < 0) {
         dev_err(&dev->udev->dev, "ccp_camac_action: ccp_inout failed: %d\n", result);
+#if 0
         nq = 1;
         nx = 1;
         return (nx << 1) | nq;
+#else
+        return result;
+#endif
     }
     
     if ((f <= 15) && data) {
@@ -864,7 +855,7 @@ static int ccp_camac_action(struct camdrv_device *dev, unsigned crate_number, un
     nx = (status & statX) ? 0x00 : 0x01;
 
     dbg_dev_print(
-        dev, "ccp_camac_action: status=0x%02x, Q=%u, X=%u, result=%d\n",
+        dev, "ccp_camac_action: status=0x%02x, NQ=%u, NX=%u, result=%d\n",
         status, nq, nx, (nx << 1) | nq
     );
 
@@ -879,8 +870,11 @@ static int ccp_read_lam(struct camdrv_device *dev, unsigned char crate_number, u
     int result;
     
     dbg_dev_print(dev, "ccp_read_lam: crate=%u\n", crate_number);
-    
+#if 0    
     if (crate_number < 1 || crate_number > 7) {
+#else
+    if (crate_number > 7) {
+#endif
         dev_err(&dev->udev->dev, "ccp_read_lam: invalid crate number %u\n", crate_number);
         return -EINVAL;
     }
@@ -934,25 +928,26 @@ static int ccp_wait_lam(struct camdrv_device *dev, unsigned char crate_number, u
 }
 
 
-static int ccp_write_register(struct camdrv_device *dev, unsigned char crate_number, unsigned /*address*/, unsigned data)
+static int ccp_write_register(struct camdrv_device *dev, unsigned char crate_number, unsigned address, unsigned data)
 {
     unsigned char cmd = cmdWRITE_REG;
     int result;
-    
+
+#if 0    
     if (crate_number < 1 || crate_number > 7) {
+#else
+    if (crate_number > 7) {
+#endif
         return -EINVAL;
     }
 
     dev->tx_buffer[0] = (cmd << 4);
     dev->tx_buffer[1] = (cmd & 0xF0);
-    dev->tx_buffer[2] = (crate_number << 4);
-    dev->tx_buffer[3] = (crate_number & 0xF0);
+    dev->tx_buffer[2] = (address << 4);
+    dev->tx_buffer[3] = (address & 0xF0);
     dev->tx_buffer[4] = ((data & 0x0f) << 4);
     dev->tx_buffer[5] = (data & 0xf0);
 
-
-    //??? where does the address go?
-    
     result = ccp_inout(dev, 6, 0);
     if (result < 0) {
         return result;
@@ -961,14 +956,19 @@ static int ccp_write_register(struct camdrv_device *dev, unsigned char crate_num
     return 0;
 }
 
-
+#if 0
+// not used
 static int ccp_read_register(struct camdrv_device *dev, unsigned char crate_number, unsigned /*address*/, unsigned *data)
 {
     unsigned char cmd = cmdREAD_REG;
     unsigned reply;
     int result;
-    
+
+#if 0
     if (crate_number < 1 || crate_number > 7) {
+#else
+    if (crate_number > 7) {
+#endif
         return -EINVAL;
     }
 
@@ -997,3 +997,4 @@ static int ccp_read_register(struct camdrv_device *dev, unsigned char crate_numb
 
     return 0;
 }
+#endif

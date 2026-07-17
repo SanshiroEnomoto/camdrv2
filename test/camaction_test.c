@@ -18,7 +18,7 @@ int main(void)
 {
     int lam_station_number = 3;
     
-    int number_of_events = 5;
+    int number_of_events = 100;
     int event_count;
     unsigned lam_bits;
     unsigned n, a, data;
@@ -58,7 +58,6 @@ int main(void)
                 camac_0(n, 0, FUNCTION_CLEAR);
 	    }
 	}
-        break;
 #if 1
         camac_0(lam_station_number, 0, FUNCTION_CLEAR_LAM);
 #else    

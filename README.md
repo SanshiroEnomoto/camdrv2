@@ -1,10 +1,5 @@
 # camdrv2: Linux 用 CAMAC デバイスドライバ
 
-<strong>開発中 / Under Development</strong>
-現時点ではまだちゃんと動作してません．
-
-
-
 - Modernized version of camdrv: https://www.awa.tohoku.ac.jp/~sanshiro/kinoko/camdrv
 - Tested for Linux kernel version 6
 - Currently only supports Hoshin CCP-USB(v2)

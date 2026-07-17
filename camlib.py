@@ -114,21 +114,21 @@ def CAMAC(n, a, f, data):
         (q, x, data, errno)
     """
     if _device_descriptor is None:
-        return (errno.EBADF, data, 0, 0)
+        return (0, 0, data, errno.EBADF)
     
     try:
         naf = ((n << 9) | (a << 5) | f) & 0x3fff
-        ioctl_data = struct.pack('<II', naf, data & 0x00ffffff)
-        result = fcntl.ioctl(_device_descriptor, CAMDRV_IOC_CAMAC_ACTION, ioctl_data)
+        ioctl_data = bytearray(struct.pack('=II', naf, data & 0x00ffffff))
+        result = fcntl.ioctl(_device_descriptor, CAMDRV_IOC_CAMAC_ACTION, ioctl_data, True)
         
         if result < 0:
             return (0, 0, 0, errno.EIO)
     except OSError as e:
-        return (e.errno, data, 0, 0)
+        return (0, 0, data, e.errno)
         
     q = 0 if (result & 0x0001) else 1
     x = 0 if (result & 0x0002) else 1
-    _, data_out = struct.unpack('<II', ioctl_data)
+    _, data_out = struct.unpack('=II', ioctl_data)
     data_out = data_out & 0x00ffffff
 
     return (q, x, data_out, 0)
@@ -141,8 +141,8 @@ def CWLAM(timeout):
         return errno.EBADF
     
     try:
-        ioctl_data = struct.pack('<II', timeout, 0)
-        result = fcntl.ioctl(_device_descriptor, CAMDRV_IOC_WAIT_LAM, ioctl_data)
+        ioctl_data = bytearray(struct.pack('=II', timeout, 0))
+        result = fcntl.ioctl(_device_descriptor, CAMDRV_IOC_WAIT_LAM, ioctl_data, True)
     except OSError as e:
         return e.errno
 
