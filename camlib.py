@@ -104,7 +104,7 @@ def CGENC():
         return e.errno
 
 
-def CAMAC(n, a, f, data):
+def CAMAC(n, a, f, data=0):
     """
     execute a CAMAC action
     Args:

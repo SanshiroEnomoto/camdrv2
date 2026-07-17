@@ -34,7 +34,7 @@ MODULE_VERSION("1.00");
 #define USB_IN_TRANSFER_SIZE 512
 
 // Debug support: define DEBUG to enable debug messages
-#define DEBUG
+//#define DEBUG
 #ifdef DEBUG
 #define dbg_print(fmt, ...) pr_info("camdrv: " fmt, ##__VA_ARGS__)
 #define dbg_dev_print(dev, fmt, ...) dev_info(&(dev)->udev->dev, "camdrv: " fmt, ##__VA_ARGS__)

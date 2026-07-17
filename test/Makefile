@@ -3,7 +3,7 @@
 # Last updated by Enomoto Sanshiro on 23 July 1999.
 
 
-TARGETS = initialize_test lam_test camaction_test speed_test test
+TARGETS = initialize_test lam_test camaction_test speed_test
 
 CC = gcc
 CFLAGS = -O -Wall -I/usr/include -Wno-unused-result -I..

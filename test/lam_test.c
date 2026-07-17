@@ -10,7 +10,7 @@
 int main(void)
 {
     int n=3, a=0, f=26, data=0, q, x;
-    int timeout = 3;  /* sec */
+    int timeout = 10;  /* sec */
     int result;
     int i;
 #if 1

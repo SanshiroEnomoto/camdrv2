@@ -6,7 +6,7 @@
 
 int main(void)
 {
-    int N = 1000;
+    int N = 100000;
     unsigned n=3, a=0, f=0, data;
     time_t start, end;
     
@@ -30,7 +30,7 @@ int main(void)
     fflush(stdout);
     system("date");
 
-    printf("lapse: %ld\n", end-start);
+    printf("speed: %d/%ld\n", N, end-start);
     
     return 0;
 }
