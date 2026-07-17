@@ -911,17 +911,26 @@ static int ccp_read_lam(struct camdrv_device *dev, unsigned char crate_number, u
 
 static int ccp_wait_lam(struct camdrv_device *dev, unsigned char crate_number, unsigned timeout, unsigned* data)
 {
-    unsigned long timeout_jiffies;
+    unsigned long timeout_jiffies = jiffies + timeout * HZ;
+    int result;
 
     /* The hardware does not support "interrupt on LAM". */
     /* The following code is a "polling loop" to wait for any LAM bits. */
-    timeout_jiffies = jiffies + timeout * HZ;
-    while ((ccp_read_lam(dev, crate_number, data) >= 0) && (*data == 0)) {
-        usleep_range(50, 500);
-        if (jiffies > timeout_jiffies) {
+    while (true) {
+        result = ccp_read_lam(dev, crate_number, data);
+        if (result < 0) {
+            return result;
+        }
+        if (*data != 0) {
+            return *data;
+        }
+
+        if (time_after_eq(jiffies, timeout_jiffies)) {
             *data = 0;
             return -ETIMEDOUT;
         }
+        
+        usleep_range(2000, 5000);
     }
 
     return *data;

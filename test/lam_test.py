@@ -30,7 +30,6 @@ print("NAF:%d,%d,%d, data:%06x, q:%d, x:%d" % (n,a,f, data, q, x))
 for i in range(16):
     sys.stdout.write("Waiting for a LAM ...");
     result = CWLAM(timeout=10)
-
     if result == 0:
         sys.stdout.write("OK.\n")
     else:
